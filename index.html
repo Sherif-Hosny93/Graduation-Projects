@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Graduation Projects CSV Viewer</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <h1>Graduation Projects</h1>
+  <div id="table-container">Loading...</div>
+  <script>
+    // Change this if you move the CSV elsewhere in your repo
+    const csvURL = "https://raw.githubusercontent.com/Sherif-Hosny93/Graduation-Projects/main/Graduation_Projects.csv";
+
+    fetch(csvURL)
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.text();
+      })
+      .then(csvText => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: function(results) {
+            const data = results.data;
+            const container = document.getElementById('table-container');
+            if (!data.length) {
+              container.innerHTML = "<p>No data found.</p>";
+              return;
+            }
+            const table = document.createElement('table');
+            // Table header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            Object.keys(data[0]).forEach(key => {
+              const th = document.createElement('th');
+              th.textContent = key;
+              headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            // Table body
+            const tbody = document.createElement('tbody');
+            data.forEach(row => {
+              const tr = document.createElement('tr');
+              Object.values(row).forEach(val => {
+                const td = document.createElement('td');
+                td.textContent = val;
+                tr.appendChild(td);
+              });
+              tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            container.innerHTML = "";
+            container.appendChild(table);
+          }
+        });
+      })
+      .catch(err => {
+        document.getElementById('table-container').textContent = "Error loading CSV: " + err;
+      });
+  </script>
+</body>
+</html>
