@@ -5,14 +5,106 @@
   <title>Graduation Projects CSV Viewer</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <h1>Graduation Projects</h1>
+  <div class="controls">
+    <input type="text" id="search-bar" placeholder="Search projects..." />
+  </div>
+  <div id="chart-container">
+    <canvas id="pieChart" width="400" height="300"></canvas>
+  </div>
   <div id="table-container">Loading...</div>
   <script>
-    // Change this if you move the CSV elsewhere in your repo
     const csvURL = "https://raw.githubusercontent.com/Sherif-Hosny93/Graduation-Projects/main/Graduation_Projects.csv";
+    let allData = [];
+    let filteredData = [];
+    let pieChart = null;
 
+    // Utility: Case-insensitive search in object values
+    function rowMatchesSearch(row, search) {
+      if (!search) return true;
+      const lower = search.toLowerCase();
+      return Object.values(row).some(val =>
+        String(val).toLowerCase().includes(lower)
+      );
+    }
+
+    // Utility: Count field occurrences for chart data
+    function countByField(data, field) {
+      const counts = {};
+      data.forEach(row => {
+        const key = row[field] || "Unknown";
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      return counts;
+    }
+
+    // Render table
+    function renderTable(data) {
+      const container = document.getElementById('table-container');
+      if (!data.length) {
+        container.innerHTML = "<p>No data found.</p>";
+        return;
+      }
+      const table = document.createElement('table');
+      // Header
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      Object.keys(data[0]).forEach(key => {
+        const th = document.createElement('th');
+        th.textContent = key;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+      // Body
+      const tbody = document.createElement('tbody');
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        Object.values(row).forEach(val => {
+          const td = document.createElement('td');
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      container.innerHTML = "";
+      container.appendChild(table);
+    }
+
+    // Render pie chart
+    function renderPieChart(data, field = "Department") {
+      const counts = countByField(data, field);
+      const ctx = document.getElementById('pieChart').getContext('2d');
+      if (pieChart) pieChart.destroy();
+      pieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(counts),
+          datasets: [{
+            data: Object.values(counts),
+            backgroundColor: [
+              "#f39c12", "#8e44ad", "#27ae60", "#e74c3c", "#3498db", "#f1c40f", "#2ecc71", "#34495e", "#1abc9c"
+            ],
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' },
+            title: {
+              display: true,
+              text: `Projects by ${field}`
+            }
+          }
+        }
+      });
+    }
+
+    // Main: Load CSV and initialize listeners
     fetch(csvURL)
       .then(response => {
         if (!response.ok) throw new Error('Network response was not ok');
@@ -23,43 +115,24 @@
           header: true,
           skipEmptyLines: true,
           complete: function(results) {
-            const data = results.data;
-            const container = document.getElementById('table-container');
-            if (!data.length) {
-              container.innerHTML = "<p>No data found.</p>";
-              return;
-            }
-            const table = document.createElement('table');
-            // Table header
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-            Object.keys(data[0]).forEach(key => {
-              const th = document.createElement('th');
-              th.textContent = key;
-              headerRow.appendChild(th);
-            });
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-            // Table body
-            const tbody = document.createElement('tbody');
-            data.forEach(row => {
-              const tr = document.createElement('tr');
-              Object.values(row).forEach(val => {
-                const td = document.createElement('td');
-                td.textContent = val;
-                tr.appendChild(td);
-              });
-              tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
-            container.innerHTML = "";
-            container.appendChild(table);
+            allData = results.data;
+            filteredData = allData;
+            renderTable(filteredData);
+            renderPieChart(filteredData, "Department");
           }
         });
       })
       .catch(err => {
         document.getElementById('table-container').textContent = "Error loading CSV: " + err;
       });
+
+    // Search bar event
+    document.getElementById('search-bar').addEventListener('input', function() {
+      const search = this.value;
+      filteredData = allData.filter(row => rowMatchesSearch(row, search));
+      renderTable(filteredData);
+      renderPieChart(filteredData, "Department");
+    });
   </script>
 </body>
 </html>
