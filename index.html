@@ -1,77 +1,214 @@
-<!-- Only the table rendering part is shown; the rest of your file remains unchanged -->
-<script>
-function renderTable(data) {
-  const container = document.getElementById('table-container');
-  if (!data.length) {
-    container.innerHTML = "<p>No data found.</p>";
-    return;
-  }
-  const table = document.createElement('table');
-  // Header
-  const thead = document.createElement('thead');
-  const headerRow = document.createElement('tr');
-  Object.keys(data[0]).forEach(key => {
-    if (key !== "Project Summary") {
-      const th = document.createElement('th');
-      th.textContent = key;
-      headerRow.appendChild(th);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Graduation Projects CSV Viewer</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <h1>Graduation Projects</h1>
+  <div id="charts-row">
+    <div class="chart-group">
+      <label for="year-select">Graduation Year:</label>
+      <select id="year-select"><option value="">All</option></select>
+      <div class="chart-container">
+        <canvas id="yearPie" width="200" height="200"></canvas>
+      </div>
+    </div>
+    <div class="chart-group">
+      <label for="univ-select">University:</label>
+      <select id="univ-select"><option value="">All</option></select>
+      <div class="chart-container">
+        <canvas id="univPie" width="200" height="200"></canvas>
+      </div>
+    </div>
+    <div class="chart-group">
+      <label for="prof-select">Dr/Prof Name:</label>
+      <select id="prof-select"><option value="">All</option></select>
+      <div class="chart-container">
+        <canvas id="profPie" width="200" height="200"></canvas>
+      </div>
+    </div>
+    <!-- Extra Graduation Year Pie Chart -->
+    <div class="chart-group">
+      <label for="extra-year-select">Year (Extra):</label>
+      <select id="extra-year-select"><option value="">All</option></select>
+      <div class="chart-container">
+        <canvas id="extraYearPie" width="200" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+  <div id="table-container">Loading...</div>
+  <script>
+    const csvURL = "https://raw.githubusercontent.com/Sherif-Hosny93/Graduation-Projects/main/Graduation_Projects.csv";
+    let allData = [];
+    let filteredData = [];
+    let charts = {};
+
+    function countByField(data, field) {
+      const counts = {};
+      data.forEach(row => {
+        const key = row[field] || "Unknown";
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      return counts;
     }
-  });
-  headerRow.appendChild(document.createElement('th')).textContent = "Details";
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
-  // Body
-  const tbody = document.createElement('tbody');
-  data.forEach((row, idx) => {
-    const tr = document.createElement('tr');
-    Object.entries(row).forEach(([k, v]) => {
-      if (k !== "Project Summary") {
-        const td = document.createElement('td');
-        td.textContent = v;
-        tr.appendChild(td);
-      }
-    });
-    // Details cell: truncated summary + show more/less
-    const tdDetails = document.createElement('td');
-    const summary = row["Project Summary"] || "No summary available";
-    const previewLen = 80;
-    const isLong = summary.length > previewLen;
-    const preview = isLong ? summary.slice(0, previewLen) + "..." : summary;
 
-    const spanPreview = document.createElement('span');
-    spanPreview.textContent = preview;
-    tdDetails.appendChild(spanPreview);
+    function populateDropdown(data, field, selectId) {
+      const select = document.getElementById(selectId);
+      const values = Array.from(new Set(data.map(row => row[field] || "Unknown"))).sort();
+      select.innerHTML = "<option value=''>All</option>" +
+        values.map(val => `<option value="${val}">${val}</option>`).join("");
+    }
 
-    if (isLong) {
-      const btn = document.createElement('button');
-      btn.textContent = "Show more";
-      btn.className = "show-details-btn";
-      btn.style.marginLeft = "8px";
-      const divFull = document.createElement('div');
-      divFull.className = "summary-div";
-      divFull.style.display = "none";
-      divFull.textContent = summary;
-
-      btn.onclick = function() {
-        if (divFull.style.display === "block") {
-          divFull.style.display = "none";
-          spanPreview.style.display = "";
-          btn.textContent = "Show more";
-        } else {
-          divFull.style.display = "block";
-          spanPreview.style.display = "none";
-          btn.textContent = "Show less";
+    function renderPieChart(data, field, chartId) {
+      const counts = countByField(data, field);
+      const ctx = document.getElementById(chartId).getContext('2d');
+      if (charts[chartId]) charts[chartId].destroy();
+      charts[chartId] = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(counts),
+          datasets: [{
+            data: Object.values(counts),
+            backgroundColor: [
+              "#f39c12", "#8e44ad", "#27ae60", "#e74c3c", "#3498db", "#f1c40f", "#2ecc71", "#34495e", "#1abc9c",
+              "#2d3436", "#fdcb6e", "#00b894", "#00cec9", "#d63031", "#636e72"
+            ],
+          }]
+        },
+        options: {
+          responsive: false,
+          plugins: {
+            legend: { position: 'bottom' },
+            title: { display: false }
+          }
         }
-      };
-
-      tdDetails.appendChild(btn);
-      tdDetails.appendChild(divFull);
+      });
     }
-    tr.appendChild(tdDetails);
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  container.innerHTML = "";
-  container.appendChild(table);
-}
-</script>
+
+    function renderTable(data) {
+      const container = document.getElementById('table-container');
+      if (!data.length) {
+        container.innerHTML = "<p>No data found.</p>";
+        return;
+      }
+      const table = document.createElement('table');
+      // Header
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      Object.keys(data[0]).forEach(key => {
+        if (key !== "Project Summary") {
+          const th = document.createElement('th');
+          th.textContent = key;
+          headerRow.appendChild(th);
+        }
+      });
+      headerRow.appendChild(document.createElement('th')).textContent = "Details";
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+      // Body
+      const tbody = document.createElement('tbody');
+      data.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        Object.entries(row).forEach(([k, v]) => {
+          if (k !== "Project Summary") {
+            const td = document.createElement('td');
+            td.textContent = v;
+            tr.appendChild(td);
+          }
+        });
+        // Details cell: truncated summary + show more/less
+        const tdDetails = document.createElement('td');
+        const summary = row["Project Summary"] || "No summary available";
+        const previewLen = 80;
+        const isLong = summary.length > previewLen;
+        const preview = isLong ? summary.slice(0, previewLen) + "..." : summary;
+
+        const spanPreview = document.createElement('span');
+        spanPreview.textContent = preview;
+        tdDetails.appendChild(spanPreview);
+
+        if (isLong) {
+          const btn = document.createElement('button');
+          btn.textContent = "Show more";
+          btn.className = "show-details-btn";
+          btn.style.marginLeft = "8px";
+          const divFull = document.createElement('div');
+          divFull.className = "summary-div";
+          divFull.style.display = "none";
+          divFull.textContent = summary;
+
+          btn.onclick = function() {
+            if (divFull.style.display === "block") {
+              divFull.style.display = "none";
+              spanPreview.style.display = "";
+              btn.textContent = "Show more";
+            } else {
+              divFull.style.display = "block";
+              spanPreview.style.display = "none";
+              btn.textContent = "Show less";
+            }
+          };
+
+          tdDetails.appendChild(btn);
+          tdDetails.appendChild(divFull);
+        }
+        tr.appendChild(tdDetails);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      container.innerHTML = "";
+      container.appendChild(table);
+    }
+
+    function applyFilters() {
+      const year = document.getElementById('year-select').value;
+      const univ = document.getElementById('univ-select').value;
+      const prof = document.getElementById('prof-select').value;
+      const extraYear = document.getElementById('extra-year-select').value;
+      filteredData = allData.filter(row =>
+        (year === "" || row["Graduation Year"] === year) &&
+        (univ === "" || row["University"] === univ) &&
+        (prof === "" || row["Dr/Prof Name"] === prof) &&
+        (extraYear === "" || row["Graduation Year"] === extraYear)
+      );
+      renderPieChart(filteredData, "Graduation Year", "yearPie");
+      renderPieChart(filteredData, "University", "univPie");
+      renderPieChart(filteredData, "Dr/Prof Name", "profPie");
+      renderPieChart(filteredData, "Graduation Year", "extraYearPie");
+      renderTable(filteredData);
+    }
+
+    fetch(csvURL)
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.text();
+      })
+      .then(csvText => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: function(results) {
+            allData = results.data;
+            populateDropdown(allData, "Graduation Year", "year-select");
+            populateDropdown(allData, "University", "univ-select");
+            populateDropdown(allData, "Dr/Prof Name", "prof-select");
+            populateDropdown(allData, "Graduation Year", "extra-year-select");
+            applyFilters();
+          }
+        });
+      })
+      .catch(err => {
+        document.getElementById('table-container').textContent = "Error loading CSV: " + err;
+      });
+
+    document.getElementById('year-select').addEventListener('change', applyFilters);
+    document.getElementById('univ-select').addEventListener('change', applyFilters);
+    document.getElementById('prof-select').addEventListener('change', applyFilters);
+    document.getElementById('extra-year-select').addEventListener('change', applyFilters);
+  </script>
+</body>
+</html>

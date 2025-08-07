@@ -1,3 +1,84 @@
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f4f7fa;
+  margin: 0;
+  padding: 24px;
+}
+h1 {
+  text-align: center;
+  color: #2c3e50;
+}
+#charts-row {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.chart-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 220px;
+  margin-bottom: 0;
+}
+.chart-group label {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.chart-group select {
+  margin-bottom: 8px;
+  font-size: 1rem;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  min-width: 180px;
+}
+.chart-container {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+  padding: 8px;
+  margin-top: 2px;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+}
+#table-container {
+  max-width: 98vw;
+  overflow-x: auto;
+  margin: 0 auto;
+  background: #fff;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 auto;
+}
+thead {
+  background: #34495e;
+  color: #fff;
+}
+th, td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+  vertical-align: top;
+  max-width: 350px;
+  word-break: break-word;
+}
+tr:nth-child(even) {
+  background: #f8fafc;
+}
+tr:hover {
+  background: #e6f7ff;
+}
 .show-details-btn {
   background: #3498db;
   color: #fff;
