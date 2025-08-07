@@ -9,29 +9,44 @@
 </head>
 <body>
   <h1>Graduation Projects</h1>
-  <div class="controls">
-    <input type="text" id="search-bar" placeholder="Search projects..." />
-  </div>
-  <div id="chart-container">
-    <canvas id="pieChart" width="400" height="300"></canvas>
+  <div id="charts-row">
+    <div class="chart-group">
+      <label for="year-select">Graduation Year:</label>
+      <select id="year-select"><option value="">All</option></select>
+      <div class="chart-container">
+        <canvas id="yearPie" width="200" height="200"></canvas>
+      </div>
+    </div>
+    <div class="chart-group">
+      <label for="univ-select">University:</label>
+      <select id="univ-select"><option value="">All</option></select>
+      <div class="chart-container">
+        <canvas id="univPie" width="200" height="200"></canvas>
+      </div>
+    </div>
+    <div class="chart-group">
+      <label for="prof-select">Dr/Prof Name:</label>
+      <select id="prof-select"><option value="">All</option></select>
+      <div class="chart-container">
+        <canvas id="profPie" width="200" height="200"></canvas>
+      </div>
+    </div>
+    <!-- Extra Graduation Year Pie Chart -->
+    <div class="chart-group">
+      <label for="extra-year-select">Year (Extra):</label>
+      <select id="extra-year-select"><option value="">All</option></select>
+      <div class="chart-container">
+        <canvas id="extraYearPie" width="200" height="200"></canvas>
+      </div>
+    </div>
   </div>
   <div id="table-container">Loading...</div>
   <script>
     const csvURL = "https://raw.githubusercontent.com/Sherif-Hosny93/Graduation-Projects/main/Graduation_Projects.csv";
     let allData = [];
     let filteredData = [];
-    let pieChart = null;
+    let charts = {};
 
-    // Utility: Case-insensitive search in object values
-    function rowMatchesSearch(row, search) {
-      if (!search) return true;
-      const lower = search.toLowerCase();
-      return Object.values(row).some(val =>
-        String(val).toLowerCase().includes(lower)
-      );
-    }
-
-    // Utility: Count field occurrences for chart data
     function countByField(data, field) {
       const counts = {};
       data.forEach(row => {
@@ -41,7 +56,39 @@
       return counts;
     }
 
-    // Render table
+    function populateDropdown(data, field, selectId) {
+      const select = document.getElementById(selectId);
+      const values = Array.from(new Set(data.map(row => row[field] || "Unknown"))).sort();
+      select.innerHTML = "<option value=''>All</option>" +
+        values.map(val => `<option value="${val}">${val}</option>`).join("");
+    }
+
+    function renderPieChart(data, field, chartId) {
+      const counts = countByField(data, field);
+      const ctx = document.getElementById(chartId).getContext('2d');
+      if (charts[chartId]) charts[chartId].destroy();
+      charts[chartId] = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(counts),
+          datasets: [{
+            data: Object.values(counts),
+            backgroundColor: [
+              "#f39c12", "#8e44ad", "#27ae60", "#e74c3c", "#3498db", "#f1c40f", "#2ecc71", "#34495e", "#1abc9c",
+              "#2d3436", "#fdcb6e", "#00b894", "#00cec9", "#d63031", "#636e72"
+            ],
+          }]
+        },
+        options: {
+          responsive: false,
+          plugins: {
+            legend: { position: 'bottom' },
+            title: { display: false }
+          }
+        }
+      });
+    }
+
     function renderTable(data) {
       const container = document.getElementById('table-container');
       if (!data.length) {
@@ -53,21 +100,48 @@
       const thead = document.createElement('thead');
       const headerRow = document.createElement('tr');
       Object.keys(data[0]).forEach(key => {
-        const th = document.createElement('th');
-        th.textContent = key;
-        headerRow.appendChild(th);
+        if (key !== "Project Summary") {
+          const th = document.createElement('th');
+          th.textContent = key;
+          headerRow.appendChild(th);
+        }
       });
+      headerRow.appendChild(document.createElement('th')).textContent = "Details";
       thead.appendChild(headerRow);
       table.appendChild(thead);
       // Body
       const tbody = document.createElement('tbody');
-      data.forEach(row => {
+      data.forEach((row, idx) => {
         const tr = document.createElement('tr');
-        Object.values(row).forEach(val => {
-          const td = document.createElement('td');
-          td.textContent = val;
-          tr.appendChild(td);
+        Object.entries(row).forEach(([k, v]) => {
+          if (k !== "Project Summary") {
+            const td = document.createElement('td');
+            td.textContent = v;
+            tr.appendChild(td);
+          }
         });
+        // Details button and summary
+        const tdDetails = document.createElement('td');
+        const btn = document.createElement('button');
+        btn.textContent = "Show more details";
+        btn.className = "show-details-btn";
+        btn.onclick = function() {
+          const summaryDiv = this.nextSibling;
+          if (summaryDiv.style.display === "block") {
+            summaryDiv.style.display = "none";
+            this.textContent = "Show more details";
+          } else {
+            summaryDiv.style.display = "block";
+            this.textContent = "Hide details";
+          }
+        };
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = "summary-div";
+        summaryDiv.style.display = "none";
+        summaryDiv.textContent = row["Project Summary"] || "No summary available";
+        tdDetails.appendChild(btn);
+        tdDetails.appendChild(summaryDiv);
+        tr.appendChild(tdDetails);
         tbody.appendChild(tr);
       });
       table.appendChild(tbody);
@@ -75,36 +149,24 @@
       container.appendChild(table);
     }
 
-    // Render pie chart
-    function renderPieChart(data, field = "Department") {
-      const counts = countByField(data, field);
-      const ctx = document.getElementById('pieChart').getContext('2d');
-      if (pieChart) pieChart.destroy();
-      pieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: Object.keys(counts),
-          datasets: [{
-            data: Object.values(counts),
-            backgroundColor: [
-              "#f39c12", "#8e44ad", "#27ae60", "#e74c3c", "#3498db", "#f1c40f", "#2ecc71", "#34495e", "#1abc9c"
-            ],
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'bottom' },
-            title: {
-              display: true,
-              text: `Projects by ${field}`
-            }
-          }
-        }
-      });
+    function applyFilters() {
+      const year = document.getElementById('year-select').value;
+      const univ = document.getElementById('univ-select').value;
+      const prof = document.getElementById('prof-select').value;
+      const extraYear = document.getElementById('extra-year-select').value;
+      filteredData = allData.filter(row =>
+        (year === "" || row["Graduation Year"] === year) &&
+        (univ === "" || row["University"] === univ) &&
+        (prof === "" || row["Dr/Prof Name"] === prof) &&
+        (extraYear === "" || row["Graduation Year"] === extraYear)
+      );
+      renderPieChart(filteredData, "Graduation Year", "yearPie");
+      renderPieChart(filteredData, "University", "univPie");
+      renderPieChart(filteredData, "Dr/Prof Name", "profPie");
+      renderPieChart(filteredData, "Graduation Year", "extraYearPie");
+      renderTable(filteredData);
     }
 
-    // Main: Load CSV and initialize listeners
     fetch(csvURL)
       .then(response => {
         if (!response.ok) throw new Error('Network response was not ok');
@@ -116,9 +178,11 @@
           skipEmptyLines: true,
           complete: function(results) {
             allData = results.data;
-            filteredData = allData;
-            renderTable(filteredData);
-            renderPieChart(filteredData, "Department");
+            populateDropdown(allData, "Graduation Year", "year-select");
+            populateDropdown(allData, "University", "univ-select");
+            populateDropdown(allData, "Dr/Prof Name", "prof-select");
+            populateDropdown(allData, "Graduation Year", "extra-year-select");
+            applyFilters();
           }
         });
       })
@@ -126,13 +190,10 @@
         document.getElementById('table-container').textContent = "Error loading CSV: " + err;
       });
 
-    // Search bar event
-    document.getElementById('search-bar').addEventListener('input', function() {
-      const search = this.value;
-      filteredData = allData.filter(row => rowMatchesSearch(row, search));
-      renderTable(filteredData);
-      renderPieChart(filteredData, "Department");
-    });
+    document.getElementById('year-select').addEventListener('change', applyFilters);
+    document.getElementById('univ-select').addEventListener('change', applyFilters);
+    document.getElementById('prof-select').addEventListener('change', applyFilters);
+    document.getElementById('extra-year-select').addEventListener('change', applyFilters);
   </script>
 </body>
 </html>
