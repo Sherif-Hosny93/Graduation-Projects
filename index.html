@@ -18,10 +18,21 @@
       </div>
     </div>
     <div class="chart-group">
-      <label for="faculty-select">Faculty Name:</label>
-      <select id="faculty-select"><option value="">All</option></select>
+      <label for="university-select">University:</label>
+      <select id="university-select"><option value="">All</option></select>
       <div class="chart-container">
-        <canvas id="facultyPie" width="200" height="200"></canvas>
+        <canvas id="universityPie" width="200" height="200"></canvas>
+      </div>
+    </div>
+    <div class="chart-group">
+      <label for="sponsorship-select">Company Sponsorship:</label>
+      <select id="sponsorship-select">
+        <option value="">All</option>
+        <option value="Yes">Yes</option>
+        <option value="No">No</option>
+      </select>
+      <div class="chart-container">
+        <canvas id="sponsorshipPie" width="200" height="200"></canvas>
       </div>
     </div>
     <div class="chart-group">
@@ -41,8 +52,8 @@
       let allData = [];
       let filteredData = [];
       let charts = {};
+      let firstColumnName = ""; // To be detected dynamically
 
-      // Count occurrences by single field
       function countByField(data, field) {
         const counts = {};
         data.forEach((row) => {
@@ -52,7 +63,6 @@
         return counts;
       }
 
-      // Count occurrences by multiple fields combined
       function countByMultipleFields(data, fields) {
         const counts = {};
         data.forEach((row) => {
@@ -64,7 +74,6 @@
         return counts;
       }
 
-      // Populate dropdown from single field
       function populateDropdown(data, field, selectId) {
         const select = document.getElementById(selectId);
         const values = Array.from(new Set(data.map((row) => row[field] || "Unknown"))).sort();
@@ -73,7 +82,6 @@
           values.map((val) => `<option value="${val}">${val}</option>`).join("");
       }
 
-      // Populate dropdown from multiple fields combined
       function populateDropdownMultipleFields(data, fields, selectId) {
         const select = document.getElementById(selectId);
         const valuesSet = new Set();
@@ -89,7 +97,6 @@
           values.map((val) => `<option value="${val}">${val}</option>`).join("");
       }
 
-      // Render pie chart
       function renderPieChart(data, fieldOrFields, chartId, isMultipleFields = false) {
         const counts = isMultipleFields ? countByMultipleFields(data, fieldOrFields) : countByField(data, fieldOrFields);
         const ctx = document.getElementById(chartId).getContext("2d");
@@ -131,7 +138,6 @@
         });
       }
 
-      // Render data table
       function renderTable(data) {
         const container = document.getElementById("table-container");
         if (!data.length) {
@@ -142,7 +148,8 @@
         // Header
         const thead = document.createElement("thead");
         const headerRow = document.createElement("tr");
-        Object.keys(data[0]).forEach((key) => {
+        const dataColumns = Object.keys(data[0]);
+        dataColumns.forEach((key) => {
           if (key !== "Project Summary") {
             const th = document.createElement("th");
             th.textContent = key;
@@ -156,10 +163,20 @@
         const tbody = document.createElement("tbody");
         data.forEach((row) => {
           const tr = document.createElement("tr");
-          Object.entries(row).forEach(([k, v]) => {
+          dataColumns.forEach((k) => {
             if (k !== "Project Summary") {
               const td = document.createElement("td");
-              td.textContent = v;
+              if (k.trim().toLowerCase() === "thesis document" && row[k] && row[k].trim() !== "") {
+                // Thesis document as hyperlink
+                const link = document.createElement("a");
+                link.href = row[k];
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.textContent = "Download";
+                td.appendChild(link);
+              } else {
+                td.textContent = row[k];
+              }
               tr.appendChild(td);
             }
           });
@@ -207,27 +224,29 @@
         container.appendChild(table);
       }
 
-      // Apply filters and update charts/table
       function applyFilters() {
         const year = document.getElementById("year-select").value;
-        const faculty = document.getElementById("faculty-select").value; // Faculty Name
+        const university = document.getElementById("university-select").value;
         const prof = document.getElementById("prof-select").value;
+        const sponsorship = document.getElementById("sponsorship-select").value;
+
         filteredData = allData.filter(
           (row) =>
             (year === "" || row["Graduation Year"] === year) &&
-            (faculty === "" || row["Faculty Name"] === faculty) &&
+            (university === "" || row[firstColumnName] === university) &&
+            (sponsorship === "" || (row["Company Sponsorship"] || "").toLowerCase() === sponsorship.toLowerCase()) &&
             (prof === "" ||
               row["Supervisor 1"] === prof ||
               row["Supervisor 2"] === prof ||
               row["Company Mentor Name"] === prof)
         );
         renderPieChart(filteredData, "Graduation Year", "yearPie");
-        renderPieChart(filteredData, "Faculty Name", "facultyPie");
+        renderPieChart(filteredData, firstColumnName, "universityPie");
+        renderPieChart(filteredData, "Company Sponsorship", "sponsorshipPie");
         renderPieChart(filteredData, ["Supervisor 1", "Supervisor 2", "Company Mentor Name"], "profPie", true);
         renderTable(filteredData);
       }
 
-      // Fetch CSV and initialize
       fetch(csvURL)
         .then((response) => {
           if (!response.ok) throw new Error("Network response was not ok");
@@ -239,8 +258,15 @@
             skipEmptyLines: true,
             complete: function (results) {
               allData = results.data;
+              if (allData.length > 0) {
+                // Use the first column as university
+                firstColumnName = Object.keys(allData[0])[0];
+              } else {
+                firstColumnName = "University";
+              }
               populateDropdown(allData, "Graduation Year", "year-select");
-              populateDropdown(allData, "Faculty Name", "faculty-select");
+              populateDropdown(allData, firstColumnName, "university-select");
+              // No need to populate sponsorship dropdown (it's static)
               populateDropdownMultipleFields(
                 allData,
                 ["Supervisor 1", "Supervisor 2", "Company Mentor Name"],
@@ -256,8 +282,9 @@
         });
 
       document.getElementById("year-select").addEventListener("change", applyFilters);
-      document.getElementById("faculty-select").addEventListener("change", applyFilters);
+      document.getElementById("university-select").addEventListener("change", applyFilters);
       document.getElementById("prof-select").addEventListener("change", applyFilters);
+      document.getElementById("sponsorship-select").addEventListener("change", applyFilters);
     });
   </script>
 </body>
