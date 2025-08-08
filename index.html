@@ -52,7 +52,7 @@
       let allData = [];
       let filteredData = [];
       let charts = {};
-      let firstColumnName = ""; // To be detected dynamically
+      let firstColumnName = "";
 
       function countByField(data, field) {
         const counts = {};
@@ -91,7 +91,8 @@
             valuesSet.add(val);
           });
         });
-        const values = Array.from(valuesSet).sort();
+        // Remove "Unknown"
+        const values = Array.from(valuesSet).filter(val => val !== "Unknown").sort();
         select.innerHTML =
           "<option value=''>All</option>" +
           values.map((val) => `<option value="${val}">${val}</option>`).join("");
@@ -234,7 +235,7 @@
           (row) =>
             (year === "" || row["Graduation Year"] === year) &&
             (university === "" || row[firstColumnName] === university) &&
-            (sponsorship === "" || (row["Company Sponsorship"] || "").toLowerCase() === sponsorship.toLowerCase()) &&
+            (sponsorship === "" || ((row["Company Sponsorship"] || "").trim().toLowerCase() === sponsorship.toLowerCase())) &&
             (prof === "" ||
               row["Supervisor 1"] === prof ||
               row["Supervisor 2"] === prof ||
@@ -266,7 +267,6 @@
               }
               populateDropdown(allData, "Graduation Year", "year-select");
               populateDropdown(allData, firstColumnName, "university-select");
-              // No need to populate sponsorship dropdown (it's static)
               populateDropdownMultipleFields(
                 allData,
                 ["Supervisor 1", "Supervisor 2", "Company Mentor Name"],
