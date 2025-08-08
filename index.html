@@ -18,10 +18,10 @@
       </div>
     </div>
     <div class="chart-group">
-      <label for="univ-select">Faculty Name:</label>
-      <select id="univ-select"><option value="">All</option></select>
+      <label for="faculty-select">Faculty Name:</label>
+      <select id="faculty-select"><option value="">All</option></select>
       <div class="chart-container">
-        <canvas id="univPie" width="200" height="200"></canvas>
+        <canvas id="facultyPie" width="200" height="200"></canvas>
       </div>
     </div>
     <div class="chart-group">
@@ -210,7 +210,7 @@
       // Apply filters and update charts/table
       function applyFilters() {
         const year = document.getElementById("year-select").value;
-        const faculty = document.getElementById("univ-select").value; // Faculty Name
+        const faculty = document.getElementById("faculty-select").value; // Faculty Name
         const prof = document.getElementById("prof-select").value;
         filteredData = allData.filter(
           (row) =>
@@ -222,7 +222,7 @@
               row["Company Mentor Name"] === prof)
         );
         renderPieChart(filteredData, "Graduation Year", "yearPie");
-        renderPieChart(filteredData, "Faculty Name", "univPie");
+        renderPieChart(filteredData, "Faculty Name", "facultyPie");
         renderPieChart(filteredData, ["Supervisor 1", "Supervisor 2", "Company Mentor Name"], "profPie", true);
         renderTable(filteredData);
       }
@@ -240,8 +240,12 @@
             complete: function (results) {
               allData = results.data;
               populateDropdown(allData, "Graduation Year", "year-select");
-              populateDropdown(allData, "Faculty Name", "univ-select");
-              populateDropdownMultipleFields(allData, ["Supervisor 1", "Supervisor 2", "Company Mentor Name"], "prof-select");
+              populateDropdown(allData, "Faculty Name", "faculty-select");
+              populateDropdownMultipleFields(
+                allData,
+                ["Supervisor 1", "Supervisor 2", "Company Mentor Name"],
+                "prof-select"
+              );
               applyFilters();
             },
           });
@@ -252,7 +256,7 @@
         });
 
       document.getElementById("year-select").addEventListener("change", applyFilters);
-      document.getElementById("univ-select").addEventListener("change", applyFilters);
+      document.getElementById("faculty-select").addEventListener("change", applyFilters);
       document.getElementById("prof-select").addEventListener("change", applyFilters);
     });
   </script>
